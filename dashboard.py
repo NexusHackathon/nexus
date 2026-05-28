@@ -9,13 +9,14 @@ ESP32_IP = "192.168.0.146"
 URL = f"http://{ESP32_IP}/data"
 # ==========================================================
 
-st.set_page_config(page_title="Tactical Command Monitor v7.0", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Tactical Command Monitor v7.1", layout="wide", initial_sidebar_state="collapsed")
 
 if 'history' not in st.session_state:
-    st.session_state.history = pd.DataFrame(columns=['Time', 'Gas (%)', 'Magnet Raw', 'RSSI'])
+    st.session_state.history = pd.DataFrame(columns=['Time', 'Gas (%)', 'Magnet Raw', 'SDR Energy (%)'])
 
 if 'last_valid_data' not in st.session_state:
-    st.session_state.last_valid_data = {"gas": 0.0, "mag": 2500, "rssi": -120.0, "c_z": 0, "c_n": 0, "c_f": 0}
+    # שיניתי את ברירת המחדל של ה-RSSI ל-0.0
+    st.session_state.last_valid_data = {"gas": 0.0, "mag": 2500, "rssi": 0.0, "c_z": 0, "c_n": 0, "c_f": 0}
 
 st.markdown("""
 <style>
@@ -74,51 +75,46 @@ while True:
     # חילוץ נתונים גולמיים
     g_raw = float(raw_json.get('gas', 0.0))
     mag_raw = int(raw_json.get('mag', 2500))
-    rssi_raw = float(raw_json.get('rssi', -120.0))
+    sdr_power = float(raw_json.get('rssi', 0.0))  # התיקון: זה אנרגיה, לא RSSI שלילי
+
     c_zero = int(raw_json.get('c_z', 0))
     c_near = int(raw_json.get('c_n', 0))
     c_far = int(raw_json.get('c_f', 0))
     c_total = c_zero + c_near + c_far
 
     # ==========================================================
-    # מנוע החלטות (The Decision Engine) - רץ בפייתון!
+    # Decision Engine (Updated)
     # ==========================================================
 
-    # בדיקת חריגות (Booleans)
-    # גז: מעל 1200 זה חריג בינוני. מעל 3500 זה אקסטרים.
+    # Check for abnormalities (Booleans)
     gas_abnormal = g_raw > 1200
     gas_extreme = g_raw >= 3500
-
-    # מגנט: נורמה היא סביב 2000-2500. סטייה משמעותית למעלה או למטה מצביעה על חריגה.
     mag_abnormal = mag_raw < 1500 or mag_raw > 3000
 
-    # שידור (SDR): התראה חזקה מאוד אם הערך קופץ מה--120 (למשל מעל -80)
-    rssi_abnormal = rssi_raw > -80
+    # Critical update: Check if SDR energy exceeds 0.3
+    sdr_abnormal = sdr_power >= 0.40
 
-    # ספירת כמה חיישנים מדווחים על בעיה
-    abnormal_count = sum([gas_abnormal, mag_abnormal, rssi_abnormal])
+    abnormal_count = sum([gas_abnormal, mag_abnormal, sdr_abnormal])
 
     threat_score = 0
 
-    # חוקי האזהרה:
-    if rssi_abnormal and (gas_abnormal or mag_abnormal):
-        # חוק 2: RSSI חריג + חיישן נוסף חריג = אזהרה חמורה
+    # Warning rules:
+    if sdr_abnormal and (gas_abnormal or mag_abnormal):
         threat_level = "CRITICAL"
         threat_score = 95
     elif abnormal_count >= 2:
-        # חוק 1: לפחות 2 ערכים חריגים (למשל גז ומגנט) = אזהרה בינונית
         threat_level = "SUSPICIOUS"
         threat_score = 65
-    elif rssi_abnormal:
-        # RSSI לבד - משקל כבד, אבל לא חמור מספיק בלי אימות נוסף
+    elif sdr_abnormal:
         threat_level = "SUSPICIOUS"
         threat_score = 55
+    elif sdr_power >= 0.3:  # New condition for intermediate suspicious state
+        threat_level = "SUSPICIOUS"
+        threat_score = 35
     elif gas_extreme:
-        # אם רק הגז חורג, אבל ברמות קיצון
         threat_level = "SUSPICIOUS"
         threat_score = 45
     else:
-        # הכל שקט או רק רעש רקע קטן
         threat_level = "SAFE"
         threat_score = 15
 
@@ -128,7 +124,7 @@ while True:
         'Time': now_time,
         'Gas (%)': min(100, (g_raw / 4095.0) * 100),
         'Magnet Raw': mag_raw,
-        'RSSI': rssi_raw
+        'SDR Energy (%)': min(100, sdr_power * 100)  # ממיר 0.45 ל-45% לתצוגה נוחה בגרף
     }])
     st.session_state.history = pd.concat([st.session_state.history, new_row]).tail(30)
 
@@ -147,7 +143,6 @@ while True:
     with cards_place.container():
         top_col1, top_col2 = st.columns([2, 1])
 
-        # תצוגה לפי הלוגיקה החדשה שלנו
         if threat_level == "CRITICAL":
             card_class = "sensor-alert"
             title_text = "ENV CRITICAL: ALERT"
@@ -168,7 +163,6 @@ while True:
         </div>
         """, unsafe_allow_html=True)
 
-        # כרטיס מצלמות (ללא שינוי)
         if c_zero > 0 or (c_total > 0 and c_near == 0 and c_far == 0):
             cam_class, cam_title = "cam-crit", "RF ALERT: CRIT"
         elif c_near > 0 or c_total > 0:
@@ -192,12 +186,11 @@ while True:
     <div class="telemetry-strip">
         <div class="telemetry-item"><div class="telemetry-label">☣️ HYDROCARBON GAS</div><div class="telemetry-value">{g_raw:.0f}</div></div>
         <div class="telemetry-item"><div class="telemetry-label">🧲 MAGNET RAW</div><div class="telemetry-value">{mag_raw}</div></div>
-        <div class="telemetry-item"><div class="telemetry-label">📡 SDR RSSI</div><div class="telemetry-value">{rssi_raw:.2f}</div></div>
+        <div class="telemetry-item"><div class="telemetry-label">📡 SDR ENERGY</div><div class="telemetry-value">{sdr_power:.3f}</div></div>
     </div>
     """, unsafe_allow_html=True)
 
-    graph_title_place.markdown('<div class="graph-title">📊 HARDWARE TELEMETRY STREAM (RAW VALUES)</div>',
-                               unsafe_allow_html=True)
+    graph_title_place.markdown('<div class="graph-title">📊 HARDWARE TELEMETRY STREAM</div>', unsafe_allow_html=True)
 
     chart_data = st.session_state.history.set_index('Time')
     graph_place.line_chart(chart_data, height=210, use_container_width=True)
