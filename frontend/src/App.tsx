@@ -9,15 +9,8 @@ import { Panel } from "./components/Panel";
 import { ThreatHero } from "./components/ThreatHero";
 import { RadarPanel } from "./components/RadarPanel";
 import { TelemetrySection } from "./components/TelemetrySection";
-import { TelemetryChart } from "./components/TelemetryChart";
 
 const STANDBY = { color: "#6f7a3a", rgb: "111,122,58", label: "המתנה" };
-
-const LEGEND = [
-  { label: "איום", color: "var(--accent)" },
-  { label: "תדר", color: "#46658a" },
-  { label: "גז", color: "#937235" },
-];
 
 // Staggered console boot-up: panels rise, sharpen and settle in sequence.
 const container: Variants = {
@@ -36,7 +29,7 @@ const item: Variants = {
 };
 
 export default function App() {
-  const { latest, history, connected } = useNexusFeed();
+  const { latest, connected } = useNexusFeed();
   const accent = latest ? THREAT_ACCENTS[latest.threat.level] : STANDBY;
 
   useEffect(() => {
@@ -87,33 +80,12 @@ export default function App() {
                   </span>
                 }
               >
-                <RadarPanel rf={latest.rf} />
+                <RadarPanel rf={latest.rf} cameraDetected={latest.raw.yolo === 1} />
               </Panel>
             </motion.div>
 
             <motion.div variants={item}>
               <TelemetrySection reading={latest} />
-            </motion.div>
-
-            <motion.div variants={item}>
-              <Panel
-                title="טלמטריה חיה"
-              aside={
-                <div className="flex items-center gap-3">
-                  {LEGEND.map((l) => (
-                    <span
-                      key={l.label}
-                      className="flex items-center gap-1.5 font-hud text-[0.64rem] font-medium text-mute"
-                    >
-                      <span className="inline-block h-2 w-2 rounded-full" style={{ background: l.color }} />
-                      {l.label}
-                    </span>
-                  ))}
-                </div>
-              }
-            >
-              <TelemetryChart history={history} color={accent.color} />
-              </Panel>
             </motion.div>
           </motion.main>
         ) : (

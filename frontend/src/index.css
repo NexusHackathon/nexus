@@ -466,6 +466,28 @@ body {
   animation: radar-ping 3.6s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
 }
 
+/* AI camera-detection alert banner inside the RF monitor panel. */
+.cam-alert {
+  border-color: rgba(207, 36, 64, 0.45);
+  background:
+    linear-gradient(120deg, rgba(207, 36, 64, 0.14), rgba(207, 36, 64, 0.05)),
+    rgba(255, 250, 250, 0.6);
+  box-shadow:
+    0 0 0 1px rgba(207, 36, 64, 0.12),
+    0 10px 26px -12px rgba(207, 36, 64, 0.5);
+  animation: cam-alert-breathe 1.8s ease-in-out infinite;
+}
+.cam-alert-icon {
+  color: #fff;
+  background: linear-gradient(150deg, #e23150, #b01a32);
+  box-shadow: 0 0 14px 1px rgba(207, 36, 64, 0.5);
+}
+.cam-alert-dot {
+  background: #cf2440;
+  box-shadow: 0 0 10px 2px rgba(207, 36, 64, 0.7);
+  animation: alert-breathe 1.2s ease-in-out infinite;
+}
+
 /* Flowing highlight that travels along a sensor fill bar. */
 .bar-flow {
   position: absolute;
@@ -565,6 +587,19 @@ body {
     opacity: 1;
   }
 }
+@keyframes cam-alert-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(207, 36, 64, 0.12),
+      0 10px 26px -12px rgba(207, 36, 64, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(207, 36, 64, 0.3),
+      0 12px 30px -10px rgba(207, 36, 64, 0.7);
+  }
+}
 @keyframes pulse-soft {
   0%,
   100% {
@@ -659,6 +694,8 @@ body {
   .bar-flow,
   .wordmark,
   .boot-sweep,
+  .cam-alert,
+  .cam-alert-dot,
   .panel--live::before {
     animation: none !important;
   }

@@ -10,6 +10,7 @@ export interface RawReading {
   c_z: number;
   c_n: number;
   c_f: number;
+  yolo: number;
 }
 
 export interface ThreatFlags {

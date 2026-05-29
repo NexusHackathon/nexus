@@ -50,6 +50,7 @@ class ESP32Source:
                 c_z=int(j.get("c_z", 0)),
                 c_n=int(j.get("c_n", 0)),
                 c_f=int(j.get("c_f", 0)),
+                yolo=int(j.get("yolo", 0)),
             )
             return self._last, True
         except (httpx.HTTPError, ValueError, KeyError):
@@ -87,8 +88,8 @@ class SimSource:
         s = self._s
 
         if s.ttl <= 0:
-            if self._r.random() < 0.05:
-                s.event = self._r.choice(self._EVENTS)
+            if self._r.random() < 1.05:
+                s.event = "rf_intrusion"
                 s.ttl = self._r.randint(10, 24)
             else:
                 s.event = "idle"
@@ -98,6 +99,7 @@ class SimSource:
 
         gas_target, mag_target, sdr_target = 620.0, 2500.0, 0.07
         c_z = c_n = c_f = 0
+        yolo = 0
 
         match s.event:
             case "gas_leak":
@@ -106,6 +108,7 @@ class SimSource:
                 sdr_target = 0.50
                 c_n = self._r.randint(1, 3)
                 c_f = self._r.randint(0, 4)
+                yolo = 1  # AI model spots a camera during an RF intrusion
             case "magnetic_anomaly":
                 mag_target = self._r.choice([1100.0, 3500.0])
             case "combined_breach":
@@ -136,5 +139,6 @@ class SimSource:
             c_z=c_z,
             c_n=c_n,
             c_f=c_f,
+            yolo=yolo,
         )
         return raw, True

@@ -1,9 +1,12 @@
 import { useMemo } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { AlertTriangle } from "lucide-react";
 import type { RFAssessment } from "../types";
 import { RF_ACCENTS } from "../lib/theme";
 
 interface RadarPanelProps {
   rf: RFAssessment;
+  cameraDetected?: boolean;
 }
 
 interface Blip {
@@ -43,7 +46,7 @@ function placeBlips(count: number, frac: number, color: string, seed: number): B
   });
 }
 
-export function RadarPanel({ rf }: RadarPanelProps) {
+export function RadarPanel({ rf, cameraDetected = false }: RadarPanelProps) {
   const accent = RF_ACCENTS[rf.level];
   const counts = { zero: rf.zero, near: rf.near, far: rf.far };
 
@@ -57,6 +60,33 @@ export function RadarPanel({ rf }: RadarPanelProps) {
 
   return (
     <div className="flex h-full flex-col">
+      <AnimatePresence>
+        {cameraDetected && (
+          <motion.div
+            key="cam-alert"
+            role="alert"
+            initial={{ opacity: 0, y: -8, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: "auto" }}
+            exit={{ opacity: 0, y: -8, height: 0 }}
+            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+            className="cam-alert mb-4 flex w-full items-center gap-3 overflow-hidden rounded-xl border px-4 py-3"
+          >
+            <span className="cam-alert-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+              <AlertTriangle size={20} strokeWidth={2.4} aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="font-display text-[0.95rem] font-black leading-tight text-[#cf2440]">
+                זוהתה מצלמה
+              </div>
+              <div className="font-hud text-[0.66rem] font-medium text-[#9a2030]">
+                זיהוי באמצעות מודל AI
+              </div>
+            </div>
+            <span className="cam-alert-dot h-2.5 w-2.5 shrink-0 rounded-full" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="relative mx-auto aspect-square w-full max-w-[300px]">
         <div className="absolute inset-0 rounded-full border border-edge bg-[radial-gradient(circle,rgba(111,122,58,0.08),transparent_70%)]" />
         {RINGS.map((ring) => (

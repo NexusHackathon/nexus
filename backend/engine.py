@@ -28,6 +28,7 @@ class RawReading:
     c_z: int
     c_n: int
     c_f: int
+    yolo: int = 0  # AI camera detection flag (1 = camera detected via YOLO model)
 
 
 @dataclass(frozen=True, slots=True)
