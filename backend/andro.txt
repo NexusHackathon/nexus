@@ -6,7 +6,7 @@
 const char* ssid = "4GWIFI_66505"; // לשנות לווייפיי שלך
 const char* password = "1234567890"; // לשנות לסיסמה שלך
 
-WebServer server(8000);
+WebServer server(80);
 
 // הוספנו את ה-yolo לטקסט ההתחלתי
 String latestJsonData = "{\"gas\":0,\"mag\":2500,\"rssi\":0.0,\"yolo\":0,\"c_z\":0,\"c_n\":0,\"c_f\":0}";

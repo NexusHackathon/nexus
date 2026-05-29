@@ -11,6 +11,7 @@ NEXUS_SIM        sim | device | auto   (default: auto)
                  device -> always poll the real ESP32 (shows OFFLINE when down)
                  auto   -> poll the device, fall back to the simulator after 3 fails
 NEXUS_ESP32_IP   ESP32 LAN IP            (default: 192.168.0.146)
+NEXUS_ESP32_PORT ESP32 HTTP server port  (default: 80)
 NEXUS_POLL_HZ    polls per second        (default: 2)
 NEXUS_HISTORY    history buffer length   (default: 90)
 """
@@ -32,6 +33,7 @@ from engine import Reading, build_reading
 from sources import ESP32Source, SimSource
 
 ESP32_IP = os.getenv("NEXUS_ESP32_IP", "192.168.0.146")
+ESP32_PORT = int(os.getenv("NEXUS_ESP32_PORT", "80"))
 POLL_HZ = float(os.getenv("NEXUS_POLL_HZ", "2"))
 HISTORY = int(os.getenv("NEXUS_HISTORY", "90"))
 
@@ -83,7 +85,7 @@ class Hub:
 
 async def poll_loop(hub: Hub) -> None:
     interval = 1.0 / max(0.2, POLL_HZ)
-    device = ESP32Source(f"http://{ESP32_IP}/data")
+    device = ESP32Source(f"http://{ESP32_IP}:{ESP32_PORT}/data")
     sim = SimSource()
     use_sim = MODE == "sim"
     fails = 0

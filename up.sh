@@ -14,8 +14,11 @@ else
   PY="python"
 fi
 
-# Simulation mode by default so it runs without the ESP32 hardware present.
-export NEXUS_SIM="${NEXUS_SIM:-sim}"
+# "auto" by default: poll the real ESP32, fall back to the simulator if it is
+# unreachable. Force pure simulator with NEXUS_SIM=sim, force device-only with
+# NEXUS_SIM=device. Point NEXUS_ESP32_IP at the device's LAN IP (printed on its
+# serial monitor); NEXUS_ESP32_PORT defaults to 80 (the Arduino WebServer port).
+export NEXUS_SIM="${NEXUS_SIM:-auto}"
 
 pids=()
 cleanup() {
@@ -27,7 +30,7 @@ cleanup() {
 }
 trap cleanup INT TERM EXIT
 
-echo "[nexus] backend  -> http://localhost:8800  (NEXUS_SIM=$NEXUS_SIM)"
+echo "[nexus] backend  -> http://localhost:8800  (NEXUS_SIM=$NEXUS_SIM ESP32=${NEXUS_ESP32_IP:-192.168.0.146}:${NEXUS_ESP32_PORT:-80})"
 "$PY" -m uvicorn main:app --reload --reload-dir backend --app-dir backend --port 8800 &
 pids+=($!)
 

@@ -6,10 +6,13 @@ Set-Location $root
 # Prefer the backend virtualenv python; fall back to system python.
 $py = if (Test-Path "backend\.venv\Scripts\python.exe") { "backend\.venv\Scripts\python.exe" } else { "python" }
 
-# Simulation mode by default so it runs without the ESP32 hardware present.
-if (-not $env:NEXUS_SIM) { $env:NEXUS_SIM = "sim" }
+# "auto" by default: poll the real ESP32, fall back to the simulator if it is
+# unreachable. Force pure simulator with NEXUS_SIM=sim, force device-only with
+# NEXUS_SIM=device. Point NEXUS_ESP32_IP at the device's LAN IP (printed on its
+# serial monitor); NEXUS_ESP32_PORT defaults to 80 (the Arduino WebServer port).
+if (-not $env:NEXUS_SIM) { $env:NEXUS_SIM = "auto" }
 
-Write-Host "[nexus] backend  -> http://localhost:8800  (NEXUS_SIM=$($env:NEXUS_SIM))" -ForegroundColor Cyan
+Write-Host "[nexus] backend  -> http://localhost:8800  (NEXUS_SIM=$($env:NEXUS_SIM) ESP32=$($env:NEXUS_ESP32_IP):$(if ($env:NEXUS_ESP32_PORT) { $env:NEXUS_ESP32_PORT } else { '80' }))" -ForegroundColor Cyan
 $backend = Start-Process -FilePath $py `
   -ArgumentList "-m","uvicorn","main:app","--reload","--reload-dir","backend","--app-dir","backend","--port","8800" `
   -NoNewWindow -PassThru
