@@ -15,7 +15,7 @@ volatile float sdr_rssi   = -120.0;
 volatile int   yolo_alert = 0; 
 String         serialBuffer = "";
 
-// WiFi Scan 
+// WiFi Scan for cameras
 volatile int wifi_cam_zero   = 0;
 volatile int wifi_cam_nearby = 0;
 volatile int wifi_cam_far    = 0;
