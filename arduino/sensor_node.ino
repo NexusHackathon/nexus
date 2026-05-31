@@ -2,20 +2,22 @@
 #include <SPI.h>
 #include <LoRa.h>
 
+// Sensor node: reads gas and magnet values, scans WiFi for suspicious cameras, and sends LoRa payloads.
+
 // Pins
 const int MAGNET_PIN = 35;
 const int SENSOR_PIN = 32;
 
-// Sensors data
+// Sensor readings
 volatile int   current_magnet_value = 0;
 volatile float current_gas          = 0.0;
 
-// Data from Pi (SDR + YOLO)
+// Data from the Pi side: SDR RSSI and YOLO alert flag.
 volatile float sdr_rssi   = -120.0; 
 volatile int   yolo_alert = 0; 
 String         serialBuffer = "";
 
-// WiFi Scan for cameras
+// WiFi scan counters for suspicious cameras.
 volatile int wifi_cam_zero   = 0;
 volatile int wifi_cam_nearby = 0;
 volatile int wifi_cam_far    = 0;
@@ -30,12 +32,13 @@ const int numMAC = 9;
 const char* suspiciousSSID[] = {"cam","ipc","tuya","v720","spy","camera"};
 const int numSSID = 6;
 
+// Parse JSON fragments arriving from the Pi over Serial.
 void parseSerialFromPi() {
   while (Serial.available()) {
     char c = Serial.read();
     if (c == '\n') {
       
-      // RSSI check
+      // Update the maximum observed RSSI value.
       int rssiIdx = serialBuffer.indexOf("\"rssi\":");
       if (rssiIdx >= 0) {
         int valStart = rssiIdx + 7;
@@ -46,6 +49,7 @@ void parseSerialFromPi() {
         }
       }
 
+      // Latch the YOLO alert when the incoming payload says so.
       int yoloIdx = serialBuffer.indexOf("\"yolo\":");
       if (yoloIdx >= 0) {
         int valStart = yoloIdx + 7;
@@ -62,9 +66,7 @@ void parseSerialFromPi() {
   }
 }
 
-// ════════════════════════════════════════════════
-//  TASK A — Core 0: Scan Wifi
-// ════════════════════════════════════════════════
+// Scan WiFi networks on Core 0 and classify suspicious camera devices by RSSI.
 void wifiScanTask(void* parameter) {
   for (;;) {
     WiFi.scanNetworks(true, false, false, 60);
@@ -109,9 +111,7 @@ void wifiScanTask(void* parameter) {
   }
 }
 
-// ════════════════════════════════════════════════
-//  SETUP
-// ════════════════════════════════════════════════
+// Sampling and transmission setup.
 const int NUM_READINGS = 10;
 int  readings[NUM_READINGS] = {0};
 int  readIndex = 0;
@@ -128,9 +128,11 @@ void setup() {
 
   wifiDataMutex = xSemaphoreCreateMutex();
 
+  // Keep WiFi in station mode for scanning only.
   WiFi.mode(WIFI_STA);
   WiFi.disconnect(); 
 
+  // Configure the LoRa radio pins and frequency.
   LoRa.setPins(5, 14, 2);
   LoRa.begin(868E6);
 
@@ -140,9 +142,7 @@ void setup() {
   );
 }
 
-// ════════════════════════════════════════════════
-//  LOOP — Core 1
-// ════════════════════════════════════════════════
+// Main loop on Core 1: read sensors, parse Pi updates, and send LoRa packets.
 void loop() {
   parseSerialFromPi();
 
@@ -187,6 +187,3 @@ void loop() {
     yolo_alert = 0; 
   }
 }
-
-
-

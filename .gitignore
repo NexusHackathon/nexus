@@ -1,0 +1,36 @@
+# IDE and editor settings
+.vscode/
+.idea/
+*.code-workspace
+
+# Operating system files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+pip-wheel-metadata/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Arduino / embedded build outputs
+build/
+out/
+.pio/
+*.elf
+*.bin
+*.hex
+*.map
+
+# Logs and local environment files
+*.log
+.env
+.env.*
