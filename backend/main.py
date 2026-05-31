@@ -44,7 +44,7 @@ elif _RAW_MODE in ("0", "false", "no", "device"):
     MODE = "device"
 else:
     MODE = "auto"
-
+MODE = "device"
 
 class Hub:
     """Tracks connected WebSocket clients, the rolling history, and broadcasts."""
