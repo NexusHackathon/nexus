@@ -1,12 +1,15 @@
-# IDE and editor settings
+# Editor and OS files
 .vscode/
 .idea/
 *.code-workspace
-
-# Operating system files
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
 Thumbs.db
 Desktop.ini
-.DS_Store
 
 # Python artifacts
 __pycache__/
@@ -21,6 +24,12 @@ pip-wheel-metadata/
 .mypy_cache/
 .ruff_cache/
 
+# Node / frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
 # Arduino / embedded build outputs
 build/
 out/
@@ -30,7 +39,10 @@ out/
 *.hex
 *.map
 
-# Logs and local environment files
+# Logs and runtime files
 *.log
+logs/
+
+# Environment files
 .env
 .env.*
