@@ -1,0 +1,714 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ *
+ *  NEXUS // Tactical Command - design tokens (Tailwind v4 CSS-first)
+ * ------------------------------------------------------------------ */
+@theme {
+  --font-display: "Rubik", system-ui, sans-serif;
+  --font-hud: "Heebo", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Luxurious warm-white surfaces */
+  --color-void: #ece6d9;
+  --color-deep: #e1dac6;
+  --color-panel: #faf7f0;
+  --color-edge: #cabf9f;
+  --color-faint: #a79d80;
+  --color-mute: #6e6953;
+  --color-text: #3a3724;
+  --color-bright: #211e12;
+
+  /* Military brand metals + semantic threat palette (tuned for light) */
+  --color-chrome: #8a7338;
+  --color-chrome-2: #6f7a3a;
+  --color-safe: #3f7d34;
+  --color-warn: #c5821c;
+  --color-crit: #cf2440;
+}
+
+/* Threat-reactive accent - App.tsx rewrites these per reading. */
+:root {
+  --accent: #6f7a3a;
+  --accent-rgb: 111, 122, 58;
+}
+
+/* Animatable angle for the live-panel border comet. */
+@property --beam {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-void);
+  color: var(--color-text);
+  font-family: var(--font-hud);
+  font-size: 16px;
+  line-height: 1.55;
+  letter-spacing: normal;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Every monospace string is an instrument readout: lock digit width and
+   slash the zero so numbers never shift or read as the letter O. */
+.font-mono {
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+::selection {
+  background: rgba(var(--accent-rgb), 0.3);
+  color: var(--color-bright);
+}
+
+/* Slim tactical scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-deep);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-edge);
+  border-radius: 999px;
+  border: 2px solid var(--color-deep);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-faint);
+}
+
+/* ------------------------------------------------------------------ *
+ *  Layered animated backdrop
+ * ------------------------------------------------------------------ */
+.bg-stage {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 120% at 50% -10%, #f7f3ea 0%, var(--color-void) 60%);
+}
+
+/* Fine paper grain so flat fills read as a textured surface, not plastic.
+   On a light surface grain must darken (multiply), not lighten (overlay). */
+.bg-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.bg-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.3;
+}
+
+.bg-glow {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(40% 50% at 18% 12%, rgba(var(--accent-rgb), 0.1), transparent 60%),
+    radial-gradient(38% 46% at 84% 22%, rgba(138, 115, 56, 0.08), transparent 60%),
+    radial-gradient(50% 50% at 50% 108%, rgba(var(--accent-rgb), 0.08), transparent 60%);
+  filter: blur(8px);
+  transform: translate3d(calc(var(--px, 0) * 18px), calc(var(--py, 0) * 18px), 0);
+  transition:
+    background 1.2s ease,
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Ambient warm pool that trails the cursor across the whole stage. */
+.bg-cursor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    460px circle at var(--cx, 50%) var(--cy, 50%),
+    rgba(var(--accent-rgb), 0.12),
+    rgba(138, 115, 56, 0.05) 38%,
+    transparent 64%
+  );
+  mix-blend-mode: multiply;
+  opacity: var(--cursor-on, 0);
+  transition: opacity 0.6s ease;
+}
+
+/* One-shot sensor-sweep beam that wipes down the viewport on first paint. */
+.boot-sweep {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 38vh;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(var(--accent-rgb), 0.05) 64%,
+    rgba(255, 255, 255, 0.32) 86%,
+    rgba(var(--accent-rgb), 0.16) 92%,
+    transparent 100%
+  );
+  mix-blend-mode: soft-light;
+  animation: boot-sweep 1.9s cubic-bezier(0.5, 0, 0.2, 1) 1 forwards;
+}
+
+.bg-grid {
+  position: absolute;
+  inset: -2px;
+  background-image:
+    linear-gradient(rgba(111, 122, 58, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(111, 122, 58, 0.08) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(120% 90% at 50% 0%, #000 30%, transparent 80%);
+  animation: grid-pan 22s linear infinite;
+}
+
+/* Faint warm sheen sweeping the surface - a whisper, never a CRT scanline. */
+.bg-scan {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    rgba(120, 110, 70, 0) 0%,
+    rgba(120, 110, 70, 0.05) 50%,
+    rgba(120, 110, 70, 0) 100%
+  );
+  background-size: 100% 4px;
+  mix-blend-mode: multiply;
+  opacity: 0.5;
+  animation: scan 7s linear infinite;
+}
+
+.bg-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 50% 38%, transparent 60%, rgba(92, 80, 48, 0.13) 100%);
+}
+
+/* Full-screen colour wash when threat escalates */
+.alert-wash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(80% 70% at 50% 50%, rgba(var(--accent-rgb), 0.12), transparent 70%);
+  animation: alert-breathe 2.4s ease-in-out infinite;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Glass panels + HUD corner brackets
+ * ------------------------------------------------------------------ */
+.panel {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(249, 246, 238, 0.78));
+  border: 1px solid var(--color-edge);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 1px rgba(255, 255, 255, 0.5),
+    0 20px 42px -28px rgba(74, 64, 38, 0.45);
+  /* Pointer-reactive 3D tilt (vars written by usePointerGlow). */
+  transform-style: preserve-3d;
+  transform:
+    perspective(1200px)
+    translateY(var(--lift, 0px))
+    rotateX(var(--ry, 0deg))
+    rotateY(var(--rx, 0deg));
+  will-change: transform;
+  transition:
+    border-color 0.28s ease,
+    box-shadow 0.28s ease,
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.panel:hover {
+  border-color: rgba(var(--accent-rgb), 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 0 1px rgba(var(--accent-rgb), 0.1),
+    0 28px 54px -26px rgba(74, 64, 38, 0.55);
+}
+
+.panel--live {
+  border-color: rgba(var(--accent-rgb), 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 0 1px rgba(var(--accent-rgb), 0.16),
+    0 22px 46px -26px rgba(74, 64, 38, 0.5);
+}
+
+/* Cursor-follow spotlight - glass catching a moving light source. */
+.panel-spot {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: var(--active, 0);
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    240px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(255, 255, 255, 0.6),
+    rgba(var(--accent-rgb), 0.12) 42%,
+    transparent 72%
+  );
+  mix-blend-mode: soft-light;
+}
+
+/* Diagonal specular sheen that sweeps once on hover. */
+.panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.5) 48%,
+    transparent 60%
+  );
+  background-size: 240% 100%;
+  background-position: 185% 0;
+  opacity: 0;
+}
+.panel:hover::after {
+  opacity: 1;
+  animation: panel-sheen 1.05s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Live panel: a luminous comet tracing the border edge. */
+.panel--live::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: 2;
+  border-radius: inherit;
+  padding: 1.4px;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--beam, 0deg),
+    transparent 0deg,
+    transparent 256deg,
+    rgba(var(--accent-rgb), 0.75) 322deg,
+    rgba(255, 255, 255, 0.95) 344deg,
+    transparent 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: beam-rot 4.6s linear infinite;
+}
+
+.corner {
+  position: absolute;
+  z-index: 3;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid rgba(var(--accent-rgb), 0.7);
+  pointer-events: none;
+  transition: border-color 0.28s ease;
+}
+.panel:hover .corner {
+  border-color: rgba(var(--accent-rgb), 0.95);
+}
+.corner.tl {
+  top: -1px;
+  left: -1px;
+  border-right: none;
+  border-bottom: none;
+  border-top-left-radius: 14px;
+}
+.corner.tr {
+  top: -1px;
+  right: -1px;
+  border-left: none;
+  border-bottom: none;
+  border-top-right-radius: 14px;
+}
+.corner.bl {
+  bottom: -1px;
+  left: -1px;
+  border-right: none;
+  border-top: none;
+  border-bottom-left-radius: 14px;
+}
+.corner.br {
+  bottom: -1px;
+  right: -1px;
+  border-left: none;
+  border-top: none;
+  border-bottom-right-radius: 14px;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Typography helpers
+ * ------------------------------------------------------------------ */
+.label {
+  font-family: var(--font-hud);
+  font-weight: 700;
+  font-size: 0.74rem;
+  letter-spacing: 0.01em;
+  color: var(--color-mute);
+}
+
+/* On a light surface a glow halo is invisible, so depth comes from crisp ink. */
+.glow-text {
+  color: var(--color-bright);
+  text-shadow: 0 1px 1px rgba(74, 64, 38, 0.18);
+}
+
+/* Reserved for the single hero focal point (threat word + score):
+   a sharp ink drop plus a faint coloured aura from the live accent. */
+.glow-strong {
+  color: var(--color-bright);
+  text-shadow:
+    0 1px 2px rgba(74, 64, 38, 0.22),
+    0 0 24px rgba(var(--accent-rgb), 0.18);
+}
+
+.divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--accent-rgb), 0.4),
+    transparent
+  );
+}
+
+/* Status chip with pulsing dot */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.32rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--accent-rgb), 0.42);
+  background: rgba(var(--accent-rgb), 0.13);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  font-family: var(--font-hud);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.01em;
+  color: var(--color-bright);
+}
+.chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 10px 1px var(--accent);
+  animation: pulse-soft 1.8s ease-in-out infinite;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Radar sweep + contact blips
+ * ------------------------------------------------------------------ */
+.radar-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(var(--accent-rgb), 0.35) 0deg,
+    rgba(var(--accent-rgb), 0.04) 32deg,
+    transparent 70deg,
+    transparent 360deg
+  );
+  animation: radar-spin 3.6s linear infinite;
+}
+
+.blip {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 12px 2px var(--accent);
+  animation: blip-pulse 2s ease-out infinite;
+}
+
+/* Sonar pings expanding from the scope centre. */
+.radar-ping {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(var(--accent-rgb), 0.55);
+  transform: translate(-50%, -50%) scale(0.2);
+  animation: radar-ping 3.6s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+}
+
+/* AI camera-detection alert banner inside the RF monitor panel. */
+.cam-alert {
+  border-color: rgba(207, 36, 64, 0.45);
+  background:
+    linear-gradient(120deg, rgba(207, 36, 64, 0.14), rgba(207, 36, 64, 0.05)),
+    rgba(255, 250, 250, 0.6);
+  box-shadow:
+    0 0 0 1px rgba(207, 36, 64, 0.12),
+    0 10px 26px -12px rgba(207, 36, 64, 0.5);
+  animation: cam-alert-breathe 1.8s ease-in-out infinite;
+}
+.cam-alert-icon {
+  color: #fff;
+  background: linear-gradient(150deg, #e23150, #b01a32);
+  box-shadow: 0 0 14px 1px rgba(207, 36, 64, 0.5);
+}
+.cam-alert-dot {
+  background: #cf2440;
+  box-shadow: 0 0 10px 2px rgba(207, 36, 64, 0.7);
+  animation: alert-breathe 1.2s ease-in-out infinite;
+}
+
+/* Flowing highlight that travels along a sensor fill bar. */
+.bar-flow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  animation: bar-flow 2.4s linear infinite;
+  mix-blend-mode: overlay;
+}
+
+/* Brass glint that sweeps across the NEXUS wordmark. */
+.wordmark {
+  background-image:
+    linear-gradient(
+      115deg,
+      transparent 42%,
+      rgba(255, 255, 255, 0.85) 50%,
+      transparent 58%
+    ),
+    linear-gradient(180deg, #2f2c1d 0%, #6f7a3a 52%, #9a7b35 100%);
+  background-size:
+    260% 100%,
+    100% 100%;
+  background-position:
+    180% 0,
+    0 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: wordmark-sheen 6.5s ease-in-out infinite;
+}
+
+/* Hero threat word: a sheen tied to the live accent passes across on change. */
+.hero-word {
+  position: relative;
+}
+.hero-word::after {
+  content: "";
+  position: absolute;
+  inset: -2px -6px;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.7) 50%,
+    transparent 60%
+  );
+  background-size: 260% 100%;
+  background-position: 180% 0;
+  mix-blend-mode: soft-light;
+  animation: hero-glint 0.95s ease-out 1;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Keyframes
+ * ------------------------------------------------------------------ */
+@keyframes grid-pan {
+  to {
+    background-position: 46px 46px;
+  }
+}
+@keyframes scan {
+  to {
+    background-position: 0 100%;
+  }
+}
+@keyframes radar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes blip-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+@keyframes alert-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes cam-alert-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(207, 36, 64, 0.12),
+      0 10px 26px -12px rgba(207, 36, 64, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(207, 36, 64, 0.3),
+      0 12px 30px -10px rgba(207, 36, 64, 0.7);
+  }
+}
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.82);
+  }
+}
+@keyframes beam-rot {
+  to {
+    --beam: 360deg;
+  }
+}
+@keyframes panel-sheen {
+  from {
+    background-position: 185% 0;
+  }
+  to {
+    background-position: -85% 0;
+  }
+}
+@keyframes radar-ping {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(13);
+    opacity: 0;
+  }
+}
+@keyframes bar-flow {
+  from {
+    background-position: -120% 0;
+  }
+  to {
+    background-position: 120% 0;
+  }
+}
+@keyframes wordmark-sheen {
+  0%,
+  62%,
+  100% {
+    background-position:
+      180% 0,
+      0 0;
+  }
+  84% {
+    background-position:
+      -80% 0,
+      0 0;
+  }
+}
+@keyframes hero-glint {
+  from {
+    background-position: 180% 0;
+  }
+  to {
+    background-position: -90% 0;
+  }
+}
+@keyframes boot-sweep {
+  0% {
+    transform: translateY(-40vh);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(115vh);
+    opacity: 0;
+  }
+}
+/* ------------------------------------------------------------------ *
+ *  Respect reduced-motion
+ * ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .bg-grid,
+  .bg-scan,
+  .radar-sweep,
+  .radar-ping,
+  .blip,
+  .alert-wash,
+  .chip-dot,
+  .bar-flow,
+  .wordmark,
+  .boot-sweep,
+  .cam-alert,
+  .cam-alert-dot,
+  .panel--live::before {
+    animation: none !important;
+  }
+  .panel {
+    transform: none !important;
+  }
+  .panel-spot,
+  .bg-cursor,
+  .radar-ping,
+  .hero-word::after {
+    display: none !important;
+  }
+  .panel:hover::after {
+    animation: none !important;
+  }
+}
